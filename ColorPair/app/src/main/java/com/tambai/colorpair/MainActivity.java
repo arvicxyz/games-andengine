@@ -28,6 +28,7 @@ import org.andengine.opengl.texture.atlas.buildable.builder.BlackPawnTextureAtla
 import org.andengine.opengl.texture.atlas.buildable.builder.ITextureAtlasBuilder.TextureAtlasBuilderException;
 import org.andengine.opengl.texture.region.TiledTextureRegion;
 import org.andengine.ui.activity.BaseGameActivity;
+import org.andengine.util.adt.align.HorizontalAlign;
 import org.andengine.util.adt.color.Color;
 import org.andengine.util.debug.Debug;
 
@@ -56,14 +57,14 @@ public class MainActivity extends BaseGameActivity
     private Text titleText;
     private Text playText;
     private Text quitText;
-    private Text menuText;
+    private Text restartText;
     private static Text timeText;
     private static Text scoreText;
     private static Text gameOverText;
 
     // graphics
     private BuildableBitmapTextureAtlas gameTextureAtlas;
-    private TiledTextureRegion cardRegion;
+    private TiledTextureRegion colorCardsRegion;
 
     // music
 
@@ -77,8 +78,8 @@ public class MainActivity extends BaseGameActivity
 
     public static final int pointsForMatch = 100;
     public static final int pointsForMiss = -5;
-    public static Card firstCard;
-    public static Card secondCard;
+    public static ColorCard firstColorCard;
+    public static ColorCard secondColorCard;
     public static int cardsLeft = 0;
     public static int score = 0;
     public static int time = 0;
@@ -162,18 +163,14 @@ public class MainActivity extends BaseGameActivity
     {
         // creating and setting the game scene
         scene = new Scene();
-        scene.getBackground().setColor(Color.BLACK);
+        scene.getBackground().setColor(new Color(0.047f, 0.047f, 0.047f));
 
         // creating and attaching layers
         mainMenuLayer = new Entity();
-        gameSceneLayer = new Entity();
-
         scene.attachChild(mainMenuLayer);
-        scene.attachChild(gameSceneLayer);
 
         // setting layer visibility
         mainMenuLayer.setVisible(true);
-        gameSceneLayer.setVisible(false);
 
         pOnCreateSceneCallback.onCreateSceneFinished(scene);
     }
@@ -182,7 +179,6 @@ public class MainActivity extends BaseGameActivity
     public void onPopulateScene(Scene pScene, OnPopulateSceneCallback pOnPopulateSceneCallback) throws IOException
     {
         loadMainMenu();
-
         pOnPopulateSceneCallback.onPopulateSceneFinished();
     }
 
@@ -217,9 +213,8 @@ public class MainActivity extends BaseGameActivity
         BitmapTextureAtlasTextureRegionFactory.setAssetBasePath("gfx/");
 
         gameTextureAtlas = new BuildableBitmapTextureAtlas(this.getTextureManager(), 240, 256, TextureOptions.BILINEAR);
-
-        cardRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(gameTextureAtlas, this,
-                "card.png", 5, 4);
+        colorCardsRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(gameTextureAtlas, this,
+                "color_cards.png", 5, 4);
 
         try
         {
@@ -248,7 +243,7 @@ public class MainActivity extends BaseGameActivity
     {
         // creating and attaching title text
         titleText = new Text(camera.getWidth() / 2, camera.getHeight() * 0.7f, titleFont,
-                "Match the Color", this.getVertexBufferObjectManager());
+                "Color Pair", this.getVertexBufferObjectManager());
         mainMenuLayer.attachChild(titleText);
 
         // creating, setting color to RED, registering touch area and attaching play text
@@ -265,6 +260,8 @@ public class MainActivity extends BaseGameActivity
                 }
                 else if (pSceneTouchEvent.isActionUp())
                 {
+                    gameSceneLayer = new Entity();
+                    scene.attachChild(gameSceneLayer);
                     loadGameScene();
                     mainMenuLayer.setVisible(false);
                     gameSceneLayer.setVisible(true);
@@ -279,7 +276,7 @@ public class MainActivity extends BaseGameActivity
             }
         };
 
-        playText.setColor(Color.RED);
+        playText.setColor(Color.GREEN);
         scene.registerTouchArea(playText);
         mainMenuLayer.attachChild(playText);
 
@@ -309,7 +306,7 @@ public class MainActivity extends BaseGameActivity
             }
         };
 
-        quitText.setColor(Color.BLUE);
+        quitText.setColor(Color.RED);
         scene.registerTouchArea(quitText);
         mainMenuLayer.attachChild(quitText);
     }
@@ -319,35 +316,35 @@ public class MainActivity extends BaseGameActivity
         gameUpdateHandler();
 
         // unregistering touch areas
-        if (menuText != null)
+        if (restartText != null)
         {
-            scene.registerTouchArea(menuText);
+            scene.registerTouchArea(restartText);
         }
 
         scene.unregisterTouchArea(playText);
         scene.unregisterTouchArea(quitText);
 
         // calculating the offsets where the cards will be placed
-        int cardContainerX = (int) (((cardRegion.getWidth() + (camera.getWidth() * 0.02083f)) * rowCardNum)
-                - (cardVerticalSpacing - cardRegion.getWidth()));
+        int cardContainerX = (int) (((colorCardsRegion.getWidth() + (camera.getWidth() * 0.02083f)) * rowCardNum)
+                - (cardVerticalSpacing - colorCardsRegion.getWidth()));
         int screenSides = (int) ((camera.getWidth() - cardContainerX) / 2);
 
-        int cardOffsetX = (int) (screenSides + (cardRegion.getWidth() / 2));
+        int cardOffsetX = (int) (screenSides + (colorCardsRegion.getWidth() / 2));
         int cardOffsetY = (int) (camera.getHeight() * 0.2f);
 
         // storing cards in an array list
-        final ArrayList<Card> cardList = new ArrayList<>();
+        final ArrayList<ColorCard> colorCardList = new ArrayList<>();
 
         for (int i = 1; i < ((rowCardNum * columnCardNum) / 2) + 1; i++)
         {
-            Card firstCard = new Card(i, 0, 0, cardRegion.getWidth() + (camera.getWidth() * 0.02083f),
-                    cardRegion.getHeight() + (camera.getHeight() * 0.0125f),
-                    cardRegion, this.getVertexBufferObjectManager());
-            cardList.add(firstCard);
-            Card secondCard = new Card(i, 0, 0, cardRegion.getWidth() + (camera.getWidth() * 0.02083f),
-                    cardRegion.getHeight() + (camera.getHeight() * 0.0125f),
-                    cardRegion, this.getVertexBufferObjectManager());
-            cardList.add(secondCard);
+            ColorCard firstColorCard = new ColorCard(i, 0, 0, colorCardsRegion.getWidth() + (camera.getWidth() * 0.02083f),
+                    colorCardsRegion.getHeight() + (camera.getHeight() * 0.0125f),
+                    colorCardsRegion, this.getVertexBufferObjectManager());
+            colorCardList.add(firstColorCard);
+            ColorCard secondColorCard = new ColorCard(i, 0, 0, colorCardsRegion.getWidth() + (camera.getWidth() * 0.02083f),
+                    colorCardsRegion.getHeight() + (camera.getHeight() * 0.0125f),
+                    colorCardsRegion, this.getVertexBufferObjectManager());
+            colorCardList.add(secondColorCard);
         }
 
         // creating the front of the cards
@@ -355,16 +352,16 @@ public class MainActivity extends BaseGameActivity
         {
             for (int k = 0; k < rowCardNum; k++)
             {
-                int rndNum = (int) Math.floor(Math.random() * cardList.size());
-                Card card = cardList.get(rndNum);
-                card.detachSelf();
-                card.setCurrentTileIndex(0);
-                card.setX((j * cardHorizontalSpacing) + cardOffsetX);
-                card.setY((k * cardVerticalSpacing) + cardOffsetY);
-                scene.registerTouchArea(card);
-                gameSceneLayer.attachChild(card);
-                int index = cardList.indexOf(card);
-                cardList.remove(index);
+                int rndNum = (int) Math.floor(Math.random() * colorCardList.size());
+                ColorCard colorCard = colorCardList.get(rndNum);
+                colorCard.detachSelf();
+                colorCard.setCurrentTileIndex(0);
+                colorCard.setX((j * cardHorizontalSpacing) + cardOffsetX);
+                colorCard.setY((k * cardVerticalSpacing) + cardOffsetY);
+                scene.registerTouchArea(colorCard);
+                gameSceneLayer.attachChild(colorCard);
+                int index = colorCardList.indexOf(colorCard);
+                colorCardList.remove(index);
                 cardsLeft++;
             }
         }
@@ -386,8 +383,8 @@ public class MainActivity extends BaseGameActivity
         gameSceneLayer.attachChild(timeText);
 
         // creating, setting color to WHITE, registering touch area and attaching menu text
-        menuText = new Text(camera.getWidth() / 2, camera.getHeight() * 0.05f, menuFont,
-                "quit", this.getVertexBufferObjectManager())
+        restartText = new Text(camera.getWidth() / 2, camera.getHeight() * 0.05f, menuFont,
+                "restart", this.getVertexBufferObjectManager())
         {
             @Override
             public boolean onAreaTouched(TouchEvent pSceneTouchEvent, float pTouchAreaLocalX, float pTouchAreaLocalY)
@@ -399,29 +396,10 @@ public class MainActivity extends BaseGameActivity
                 }
                 else if (pSceneTouchEvent.isActionUp())
                 {
-                    firstCard = null;
-                    secondCard = null;
-                    cardsLeft = 0;
-                    isFirstClickDone = false;
-                    isGameStart = false;
-                    isGameOver = false;
-                    score = 0;
-                    time = 0;
                     resetScore();
                     restartTimer();
-                    scoreText.detachSelf();
-                    timeText.detachSelf();
-                    if (gameOverText != null)
-                    {
-                        gameOverText.detachSelf();
-                    }
-                    gameSceneLayer.setVisible(false);
-                    mainMenuLayer.setVisible(true);
-                    scene.unregisterTouchArea(this);
-                    scene.registerTouchArea(playText);
-                    scene.registerTouchArea(quitText);
+                    loadGameScene();
                     this.setScale(1);
-                    System.exit(0);
                 }
                 else
                 {
@@ -432,9 +410,7 @@ public class MainActivity extends BaseGameActivity
             }
         };
 
-        menuText.setColor(Color.BLUE);
-        scene.registerTouchArea(menuText);
-        gameSceneLayer.attachChild(menuText);
+        restartText.setColor(Color.RED);
     }
 
     //-----------------------------------------
@@ -500,7 +476,11 @@ public class MainActivity extends BaseGameActivity
         String gameOverString = "congratulations!\nscore: " + score + "\ntime: " + time + " sec";
         gameOverText = new Text(camera.getWidth() / 2, camera.getHeight() / 2, menuFont,
                 gameOverString, this.getVertexBufferObjectManager());
-        gameOverText.setColor(Color.YELLOW);
+        gameOverText.setColor(Color.WHITE);
+        gameOverText.setScale(0.8f);
+        gameOverText.setHorizontalAlign(HorizontalAlign.CENTER);
         gameSceneLayer.attachChild(gameOverText);
+        scene.registerTouchArea(restartText);
+        gameSceneLayer.attachChild(restartText);
     }
 }
